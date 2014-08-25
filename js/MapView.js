@@ -71,15 +71,16 @@ MapView = (function($, L, Models, Config) {
         var options = self.map.getCenter();
         self.rackSource.withNearbyRacks(options,
             function placeRacks(racks) {
-                var markers = L.layerGroup();
-                for (var i = 0, len = racks.length; i < len; i++) {
+                var len = racks.length;
+                var markers = new Array(len);
+                for (var i = 0; i < len; i++) {
                     var marker = L.marker([racks[i].lat, racks[i].lng]);
                     marker.bindPopup(popupForRack(racks[i]));
                     marker.setIcon(self.rackIcon);
-                    markers.addLayer(marker);
+                    markers[i] = marker;
                 }
                 self.rackLayer.clearLayers();
-                self.rackLayer.addLayer(markers);
+                self.rackLayer.addLayers(markers);
             }
         );
     };
