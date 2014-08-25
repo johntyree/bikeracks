@@ -39,13 +39,13 @@ MapView = (function($, L, Models, Config) {
         self.map = L.map('map', {center: [30.267812, -97.745525],
                                  zoom: self.defaultZoom,
                                  layers: [mapboxTiles]});
-        self.zoomToUser();
-
         $.extend(self.rackLayer.options,
                  {iconCreateFunction: iconCreateFunction(self.rackIcon.options)},
                  self.markerClusterOptions);
 
         self.rackLayer.addTo(self.map);
+
+        self.zoomToUser();
 
     };
 
