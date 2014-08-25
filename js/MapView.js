@@ -50,13 +50,13 @@ MapView = (function($, L, Models, Config) {
     };
 
 
-    MapView.prototype.zoomToUser = function zoomToUser() {
+    MapView.prototype.zoomToUser = function zoomToUser(options) {
         var self = this;
 
         navigator.geolocation && navigator.geolocation.getCurrentPosition(
             function(position) {
                 zoomToPosition(position, self.map);
-                self.redraw();
+                options.redraw && self.redraw();
             },
             function(error) {console.log(error);},
             self.geo_options);
