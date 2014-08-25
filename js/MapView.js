@@ -4,16 +4,14 @@ MapView = (function($, L, Models, Config) {
 
         display: Config.display,
 
-        rackLayer: L.layerGroup(),
+        rackLayer: L.markerClusterGroup(),
 
-        rackIcon: {
-            icon: 'static/images/parking_bicycle.png',
-            shadow: 'static/images/parking_bicycle_shadow.png'
-        },
+        // .icon and .shadow urls
+        rackIconOptions: Config.rackIconOptions,
 
-        geoOptions: {
-            enableHighAccuracy: true
-        },
+        markerClusterOptions: Config.markerClusterOptions,
+
+        geoOptions: Config.geoOptions,
 
         // Initial zoom level
         defaultZoom: Config.defaultZoom
@@ -26,11 +24,8 @@ MapView = (function($, L, Models, Config) {
 
         $.extend(self, defaults, config);
 
-        self.rackIcon = new L.Icon.Default({
-            iconUrl: self.rackIcon.icon,
-            shadowUrl: self.rackIcon.shadow,
-            iconSize: [32, 37]
-        });
+        self.rackIcon = new L.Icon(self.rackIconOptions);
+        // self.rackIcon = new L.Icon.Default();
 
         self.rackSource = Models.rackSource();
 
@@ -45,6 +40,10 @@ MapView = (function($, L, Models, Config) {
                                  zoom: self.defaultZoom,
                                  layers: [mapboxTiles]});
         self.zoomToUser();
+
+        $.extend(self.rackLayer.options,
+                 {iconCreateFunction: iconCreateFunction(self.rackIcon.options)},
+                 self.markerClusterOptions);
 
         self.rackLayer.addTo(self.map);
 
@@ -99,5 +98,35 @@ MapView = (function($, L, Models, Config) {
         map.setView([lat, lng], 14);
     }
 
+    function iconCreateFunction(options) {
+        return function iconCreateFunction(cluster) {
+
+            var childCount = cluster.getChildCount();
+
+            var c = ' marker-cluster-';
+            if (childCount < 4) {
+                c += 'small';
+            } else if (childCount < 10) {
+                c += 'medium';
+            } else {
+                c += 'large';
+            }
+            var html =
+                '<div class="marker-cluster-shadow">' +
+                    '<img src="' + options.clusterShadowUrl + '"></img>' +
+                '</div>' +
+                '<img src="' + options.clusterIconUrl + '"></img>' +
+                '<div class="marker-cluster-flair' + c + '">' +
+                    '<span>' + childCount + '</span>' +
+                '</div>';
+
+            var icon = new L.DivIcon({
+                html: html,
+                className: 'marker-cluster',
+                iconSize: new L.Point(37, 26)
+            });
+            return icon;
+        };
+    };
 
 }(jQuery, L, Models, Config));
