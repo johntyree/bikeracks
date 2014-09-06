@@ -75,7 +75,7 @@ MapView = (function($, L, Models, Config) {
                 var markers = new Array(len);
                 for (var i = 0; i < len; i++) {
                     var marker = L.marker([racks[i].lat, racks[i].lng]);
-                    marker.bindPopup(popupForRack(racks[i]));
+                    marker.bindPopup(racks[i].popUp());
                     marker.setIcon(self.rackIcon);
                     markers[i] = marker;
                 }
@@ -91,15 +91,12 @@ MapView = (function($, L, Models, Config) {
     };
 
 
-    function popupForRack(rack) {
-        return rack.addr;
-    }
-
     function zoomToPosition(position, map) {
         var lat = position.coords.latitude;
         var lng = position.coords.longitude;
         map.setView([lat, lng], 14);
     }
+
 
     function iconCreateFunction(options) {
         return function iconCreateFunction(cluster) {

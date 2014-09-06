@@ -2,7 +2,7 @@
 var Config = {
 
     // API
-    nearbyRacksURL: 'static/data/bike_racks_geocodes.json',
+    nearbyRacksURL: 'static/data/austin_racks_v1.json',
 
     rackIconOptions: {
         iconUrl: 'static/images/parking_bicycle_0.png',
