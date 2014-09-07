@@ -27,11 +27,18 @@ API = (function(Config, $) {
     // Private functions
 
     function urlForNearbyRacks(options) {
-        url = Config.nearbyRacksURL;
-        var query = $.query
-                     .set('lat', options.lat)
-                     .set('lng', options.lng);
+        var url = Config.nearbyRacksURL;
+        var query = buildQuery(options);
         return url + query;
+    }
+
+
+    function buildQuery(options) {
+        var q = $.query.EMPTY();
+        for (param in Object.getOwnPropertyNames(options)) {
+            q.set(param, options[param]);
+        }
+        return q;
     }
 
 }(Config, jQuery));
