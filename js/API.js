@@ -18,9 +18,52 @@ API = (function(Config, $) {
     }
 
 
+    function updateRackPhoto(rack_id, base64Image, callback) {
+        imgurUpload(base64Image, function uploadCallback(data) {
+            var url = Config.updateRackURL;
+            var queryParams = {
+                rack_id: rack_id,
+                url: data.link
+            };
+            $.post(url, queryParams, function(json) {
+                callback && callback($.extend({resp: json}, queryParams, data));
+            });
+        });
+    }
+
+
+    function imgurUpload(base64Image, callback) {
+        if (callback === undefined) {
+            console.log('Refusing to upload without callback.');
+            return;
+        }
+        var authorization = 'Client-ID ' + Config.imgurClientID;
+
+        $.ajax({
+            url: 'https://api.imgur.com/3/image',
+            method: 'POST',
+            headers: {
+                Authorization: authorization,
+                Accept: 'application/json'
+            },
+            data: {
+                image: base64Image.slice(base64Image.indexOf(',') + 1),
+                type: 'base64'
+            },
+            success: function(result) {
+                callback({
+                    link: result.data.link,
+                    id: result.data.id
+                });
+            }
+        });
+    }
+
+
     return {
         withJSON: withJSON,
-        withNearbyRacksJSON: withNearbyRacksJSON
+        withNearbyRacksJSON: withNearbyRacksJSON,
+        updateRackPhoto: updateRackPhoto
     };
 
 
