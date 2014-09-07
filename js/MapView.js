@@ -25,7 +25,6 @@ MapView = (function($, L, Models, Config) {
         $.extend(self, defaults, config);
 
         self.rackIcon = new L.Icon(self.rackIconOptions);
-        // self.rackIcon = new L.Icon.Default();
 
         self.rackSource = Models.rackSource();
 
@@ -41,9 +40,10 @@ MapView = (function($, L, Models, Config) {
                                  layers: [mapboxTiles]});
         self.redraw();
 
-        $.extend(self.rackLayer.options,
-                 {iconCreateFunction: iconCreateFunction(self.rackIcon.options)},
-                 self.markerClusterOptions);
+        $.extend(
+            self.rackLayer.options,
+            {iconCreateFunction: iconCreateFunction(self.rackIcon.options)},
+            self.markerClusterOptions);
 
         self.rackLayer.addTo(self.map);
 
