@@ -1,11 +1,11 @@
 var Config = (function() {
 
     var rootURL = 'http://john.bitsurge.net/bikeracks';
-    var imageURL = '/static/images';
+    var imageURL = 'static/images';
     return {
 
         // API
-        nearbyRacksURL: '/static/data/austin_racks_v1.json',
+        nearbyRacksURL: 'static/data/austin_racks_v1.json',
         updateRackURL: rootURL + '/cgi-bin/bikeracks.py',
         getRackURL: rootURL + '/get/',
 
