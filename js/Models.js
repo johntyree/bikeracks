@@ -1,6 +1,7 @@
 var Models = (function($, Config, Models) {
 
     var defaults = {
+        id: 0,
         images: [],
         photo: ''
     };
@@ -17,15 +18,14 @@ var Models = (function($, Config, Models) {
     Rack.prototype.popUp = function popUp() {
         var self = this;
 
-        var uploadButton = '<div class="button" id="photoButton" onclick="Utils.takeAPhoto()">' +
+        var photo = '<div class="hidden" id="rack-img-' + self.id + '">' +
+                         '<img src="' + self.photo + '"/></br></div>';
+        var photoButton = '<div class="button" id="photoButton"' +
+                           'onclick="Utils.takeAPhoto(' + self.id + ')">' +
                            'Take a photo' +
-                           '</div>';
-        var imgTag = '<img src=' + self.photo + '/>';
-        var br = '</br>';
-        var photo = self.photo ? imgTag + br : '';
-        var uploadButton = photo ? '' : uploadButton + br;
+                           '</br></div>';
         var html = photo +
-                   uploadButton +
+                   photoButton +
                    self.address;
         return html;
     };
