@@ -19,8 +19,10 @@ var Models = (function($, Config, Models) {
         var self = this;
 
         var photo = '<div class="hidden" id="rack-img-' + self.id + '">' +
-                         '<img src="' + self.photo + '"/></br></div>';
-        var photoButton = '<div class="button" id="photoButton"' +
+                      '<img class="rack-thumbnail"' +
+                      '     "src="' + self.photo + '"/></br>' +
+                    '</div>';
+        var photoButton = '<div class="button photoButton"' +
                            'onclick="Utils.takeAPhoto(' + self.id + ')">' +
                            'Take a photo' +
                            '</br></div>';
