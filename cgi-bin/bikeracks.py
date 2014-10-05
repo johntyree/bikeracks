@@ -9,30 +9,46 @@ import json
 import os
 import re
 import sqlite3 as sql
+import sys
 
-print("Content-type: text/html\n\n")
+print("Content-Type: text/plain\n\n")
 
 DBFILE = os.path.expanduser('~/bikeracks.db')
 KEY_ID = 'rack_id'
 KEY_VALUE = 'url'
 TABLE = 'photos'
-INSPECT_SCHEMA = '''
+INSPECT_DB_SCHEMA = r'''
     PRAGMA TABLE_INFO({table});
 '''.format(table=TABLE)
-CREATE_SCHEMA = '''
+CREATE_DB_SCHEMA = r'''
     CREATE TABLE IF NOT EXISTS {table} ({id} int, {value} text);
 '''.format(table=TABLE, id=KEY_ID, value=KEY_VALUE)
-DROP_SCHEMA = '''DROP TABLE IF EXISTS {table};'''.format(table=TABLE)
-STORE_QUERY = '''INSERT INTO {table} VALUES (:id, :value);'''.format(
+DROP_DB_SCHEMA = r'''DROP TABLE IF EXISTS {table};'''.format(table=TABLE)
+STORE_QUERY = r'''INSERT INTO {table} VALUES (:id, :value);'''.format(
     table=TABLE)
-RETRIEVE_QUERY = '''SELECT {value} FROM {table} WHERE {id}=:id;'''.format(
+RETRIEVE_QUERY = r'''SELECT {value} FROM {table} WHERE {id}=:id;'''.format(
     value=KEY_VALUE, table=TABLE, id=KEY_ID)
 VALUE_VALIDATOR = re.compile(
-    '^https?://i.imgur.com/\w+.(jpg|png|gif)$')
+    r'^https?://i.imgur.com/\w+.(jpg|png|gif)$')
+
+GET = 'REQUEST_METHOD_GET'
+POST = 'REQUEST_METHOD_POST'
+DELETE = 'REQUEST_METHOD_DELETE'
+PUT = 'REQUEST_METHOD_PUT'
+INVALID = 'REQUEST_METHOD_INVALID'
+REQUEST_METHODS = {
+    'GET': GET,
+    'POST': POST,
+    'DELETE': DELETE,
+    'PUT': PUT,
+}
+
+GET_URI_VALIDATOR = re.compile(r"^/bikeracks/get/\d+(?:-\d+)?$")
+POST_URI_VALIDATOR = re.compile(r"^/bikeracks/set/\d+(?:-\d+)?$")
 
 DBCONN = None
 
-@contextmanager
+@contextmanagej
 def db_cursor():
     global DBCONN
     conn = DBCONN or sql.connect(DBFILE)
@@ -43,21 +59,21 @@ def db_cursor():
 
 def delete():
     with db_cursor() as c:
-        c.execute(DROP_SCHEMA)
+        c.execute(DROP_DB_SCHEMA)
 
 
-def initialize():
+def initialize_db():
     with db_cursor() as c:
         try:
-            c.execute(INSPECT_SCHEMA)
+            c.execute(INSPECT_DB_SCHEMA)
             cols = tuple(x[1] for x in c.fetchall())
             assert cols == (KEY_ID, KEY_VALUE)
         except AssertionError, sql.OperationalError:
             delete()
-        c.execute(CREATE_SCHEMA)
+        c.execute(CREATE_DB_SCHEMA)
 
 
-def valid(values):
+def validate_params(values):
     values = values.copy()
     if 'id' in values:
         try:
@@ -75,7 +91,7 @@ def valid(values):
 
 
 def _params_query(cursor, params, query):
-    good, res = valid(params)
+    good, res = validate_params(params)
     if good:
         params = res
         cursor.execute(query, params)
@@ -97,20 +113,88 @@ def remove(id, value):
 def retrieve(id):
     with db_cursor() as c:
         _params_query(c, {'id': id}, RETRIEVE_QUERY)
-        links = c.fetchall()
+        links = [link for links in c.fetchall() for link in links]
     return links
 
 
-def main():
-    initialize()
+def validate_route():
+    BAD_PARAM = 'Required parameter {0!r} missing mismatched'
+    BAD_REQUEST = 'URL invalid for request of type {0!r}'
+    method = INVALID
+    params = {'reason': 'unable to route request'}
     form = cgi.FieldStorage()
-    if KEY_ID and KEY_VALUE in form:
-        resp = store(form[KEY_ID].value, form[KEY_VALUE].value)
-    elif KEY_ID in form:
-        resp = retrieve(form[KEY_ID].value)
-    else:
-        resp = "Expected at least {0}".format(KEY_ID)
-    print(json.dumps(resp))
+    uri = os.environ['REQUEST_URI']
+    request_type = REQUEST_METHODS.get(os.environ['REQUEST_METHOD'], INVALID)
+    if request_type == GET:
+        if GET_URI_VALIDATOR.match(uri):
+            key = get_from_form(form, KEY_ID)
+            if key is not None:
+                method = GET
+                params = {KEY_ID: key}
+            else:
+                method = INVALID
+                params = {'reason': BAD_PARAM.format(KEY_ID)}
+        else:
+            method = INVALID
+            params = {'reason': BAD_REQUEST.format(request_type)}
+            return method, params
+    elif request_type == POST:
+        if POST_URI_VALIDATOR.match(uri):
+            key = get_from_form(form, KEY_ID)
+            if key is not None:
+                value = get_from_form(form, KEY_VALUE)
+                if value is not None:
+                    method = POST
+                    params = {KEY_ID: key, KEY_VALUE: value}
+                    return method, params
+                else:
+                    method = INVALID
+                    params = {'reason': BAD_PARAM.format(KEY_ID)}
+                    return method, params
+            else:
+                method = INVALID
+                params = {'reason': BAD_PARAM.format(KEY_ID)}
+                return method, params
+        else:
+            method = INVALID
+            params = {'reason': BAD_REQUEST.format(request_type)}
+            return method, params
+    return method, params
+
+
+def get_from_form(form, key):
+    if key in form:
+        if isinstance(form[key], list):
+            val = form[key][0].value
+            if all(v.value == val for v in form[key]):
+                return val
+        else:
+            return form[key].value
+    return None
+
+
+def dump_environ():
+    for k, v in os.environ.items():
+        print("{0}: {1}".format(k, v))
+
+def main():
+    try:
+        method, params = validate_route()
+        initialize_db()
+        resp = {'error': 'Undefined response'}
+        if method == GET:
+            resp = {'data': retrieve(params[KEY_ID])}
+        elif method == POST:
+            resp = {'data': store(params[KEY_ID], params[KEY_VALUE])}
+        elif method == INVALID:
+            resp = {'error': params['reason']}
+        else:
+            resp = {'error': "This should never happen. Go hide under the bed."}
+        print(json.dumps(resp))
+    except Exception as e:
+        import traceback
+        a, b, c = sys.exc_info()
+        traceback.print_exception(a, b, c, 100, sys.stdout)
 
 
 if __name__ == '__main__':
