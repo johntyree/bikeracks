@@ -23,3 +23,10 @@ body {
     background-color: blue;
     border-radius: 10px;
 }
+
+.leaflet-container img.rack-thumbnail {
+    position: relative;
+    /* `leaflet-container img` sets `max-width: none !important` :( */
+    max-width: 100% !important;
+    max-height: 100%;
+}
