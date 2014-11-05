@@ -43,12 +43,12 @@ REQUEST_METHODS = {
     'PUT': PUT,
 }
 
-GET_URI_VALIDATOR = re.compile(r"^/bikeracks/get/\d+(?:-\d+)?$")
-POST_URI_VALIDATOR = re.compile(r"^/bikeracks/set/\d+(?:-\d+)?$")
+GET_URI_VALIDATOR = re.compile(r"^/bikeracks/rack/\d+(?:-\d+)?$")
+POST_URI_VALIDATOR = GET_URI_VALIDATOR
 
 DBCONN = None
 
-@contextmanagej
+@contextmanager
 def db_cursor():
     global DBCONN
     conn = DBCONN or sql.connect(DBFILE)
@@ -117,29 +117,28 @@ def retrieve(id):
     return links
 
 
-def validate_route():
-    BAD_PARAM = 'Required parameter {0!r} missing mismatched'
+def validate_route(form, get_validator, post_validator):
+    BAD_PARAM = 'Required parameter {0!r} missing mismatched.\n\n{1!r}'
     BAD_REQUEST = 'URL invalid for request of type {0!r}'
     method = INVALID
     params = {'reason': 'unable to route request'}
-    form = cgi.FieldStorage()
     uri = os.environ['REQUEST_URI']
     request_type = REQUEST_METHODS.get(os.environ['REQUEST_METHOD'], INVALID)
     if request_type == GET:
-        if GET_URI_VALIDATOR.match(uri):
+        if get_validator.match(uri):
             key = get_from_form(form, KEY_ID)
             if key is not None:
                 method = GET
                 params = {KEY_ID: key}
             else:
                 method = INVALID
-                params = {'reason': BAD_PARAM.format(KEY_ID)}
+                params = {'reason': BAD_PARAM.format(KEY_ID, form)}
         else:
             method = INVALID
             params = {'reason': BAD_REQUEST.format(request_type)}
             return method, params
     elif request_type == POST:
-        if POST_URI_VALIDATOR.match(uri):
+        if post_validator.match(uri):
             key = get_from_form(form, KEY_ID)
             if key is not None:
                 value = get_from_form(form, KEY_VALUE)
@@ -149,11 +148,11 @@ def validate_route():
                     return method, params
                 else:
                     method = INVALID
-                    params = {'reason': BAD_PARAM.format(KEY_ID)}
+                    params = {'reason': BAD_PARAM.format(KEY_ID, form)}
                     return method, params
             else:
                 method = INVALID
-                params = {'reason': BAD_PARAM.format(KEY_ID)}
+                params = {'reason': BAD_PARAM.format(KEY_ID, form)}
                 return method, params
         else:
             method = INVALID
@@ -165,11 +164,12 @@ def validate_route():
 def get_from_form(form, key):
     if key in form:
         if isinstance(form[key], list):
-            val = form[key][0].value
+            val = getattr(form[key][0], 'value', form[key][0])
             if all(v.value == val for v in form[key]):
                 return val
         else:
-            return form[key].value
+            val = getattr(form[key], 'value', form[key])
+            return val
     return None
 
 
@@ -179,7 +179,9 @@ def dump_environ():
 
 def main():
     try:
-        method, params = validate_route()
+        form = cgi.FieldStorage()
+        method, params = validate_route(
+            form, GET_URI_VALIDATOR, POST_URI_VALIDATOR)
         initialize_db()
         resp = {'error': 'Undefined response'}
         if method == GET:
